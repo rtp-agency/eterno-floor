@@ -29,6 +29,7 @@ export function CatalogBrowser({
   const [collection, setCollection] = useState<CollectionId | 'all'>(initialCollection);
   const [tone, setTone] = useState<Tone | 'all'>('all');
   const [active, setActive] = useState<number | null>(null);
+  const [dir, setDir] = useState<1 | -1>(1);
 
   const filtered = useMemo(
     () =>
@@ -42,15 +43,29 @@ export function CatalogBrowser({
 
   const close = useCallback(() => setActive(null), []);
   const step = useCallback(
-    (dir: number) => {
+    (d: number) => {
+      setDir(d >= 0 ? 1 : -1);
       setActive((i) => {
         if (i === null) return i;
         const n = filtered.length;
-        return (i + dir + n) % n;
+        return (i + d + n) % n;
       });
     },
     [filtered.length],
   );
+
+  // Preload neighbouring full images so swapping feels instant.
+  useEffect(() => {
+    if (active === null) return;
+    const n = filtered.length;
+    [(active + 1) % n, (active - 1 + n) % n].forEach((i) => {
+      const p = filtered[i];
+      if (p) {
+        const img = new window.Image();
+        img.src = `/products/${p.id}.webp`;
+      }
+    });
+  }, [active, filtered]);
 
   useEffect(() => {
     if (active === null) return;
@@ -114,7 +129,7 @@ export function CatalogBrowser({
         <ul className="grid">
           {filtered.map((p, i) => (
             <li key={p.id}>
-              <button className="card" onClick={() => setActive(i)}>
+              <button className="card" onClick={() => { setDir(1); setActive(i); }}>
                 <span className="card__media">
                   <img src={`/products/${p.id}-thumb.webp`} alt={productName(p, locale)} loading="lazy" />
                 </span>
@@ -132,7 +147,7 @@ export function CatalogBrowser({
       )}
 
       {activeProduct && (
-        <Lightbox locale={locale} dict={dict} product={activeProduct} onClose={close} onPrev={() => step(-1)} onNext={() => step(1)} />
+        <Lightbox locale={locale} dict={dict} product={activeProduct} dir={dir} onClose={close} onPrev={() => step(-1)} onNext={() => step(1)} />
       )}
     </div>
   );
@@ -142,6 +157,7 @@ function Lightbox({
   locale,
   dict,
   product,
+  dir,
   onClose,
   onPrev,
   onNext,
@@ -149,6 +165,7 @@ function Lightbox({
   locale: Locale;
   dict: Dictionary;
   product: Product;
+  dir: 1 | -1;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -169,11 +186,18 @@ function Lightbox({
     <div className="lightbox" onClick={onClose}>
       <div className="lightbox__panel" onClick={(e) => e.stopPropagation()}>
         <button className="lightbox__close" aria-label="Close" onClick={onClose}>×</button>
-        <button className="lightbox__nav lightbox__nav--prev" aria-label="Previous" onClick={onPrev}>‹</button>
-        <button className="lightbox__nav lightbox__nav--next" aria-label="Next" onClick={onNext}>›</button>
 
         <div className="lightbox__media">
-          <img src={`/products/${product.id}.webp`} alt={productName(product, locale)} />
+          <img
+            key={product.id}
+            className={`lightbox__img swap-${dir > 0 ? 'next' : 'prev'}`}
+            src={`/products/${product.id}.webp`}
+            alt={productName(product, locale)}
+          />
+          <div className="lightbox__nav-group">
+            <button className="lightbox__nav" aria-label="Previous" onClick={onPrev}>‹</button>
+            <button className="lightbox__nav" aria-label="Next" onClick={onNext}>›</button>
+          </div>
         </div>
         <div className="lightbox__info">
           <span className="lightbox__collection">{col.name}</span>

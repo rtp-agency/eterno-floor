@@ -1,14 +1,23 @@
 import type { ReactNode } from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { locales, isLocale, type Locale } from '@/lib/i18n';
 import { getDictionary } from '@/lib/dictionaries';
+import { CONTACT } from '@/lib/products';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
+
+export const viewport: Viewport = {
+  themeColor: '#241812',
+  width: 'device-width',
+  initialScale: 1,
+};
+
+const ogLocale: Record<Locale, string> = { es: 'es_ES', pt: 'pt_PT', ru: 'ru_RU', en: 'en_US' };
 
 const meta: Record<Locale, { title: string; description: string }> = {
   es: {
@@ -40,15 +49,33 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title: meta[l].title,
     description: meta[l].description,
     metadataBase: new URL('https://eternodesigns.com'),
+    applicationName: 'ETERNO design',
+    keywords:
+      'SPC flooring, suelos SPC, pavimentos SPC, SPC-полы, vinyl flooring, click flooring, underfloor heating, waterproof flooring, ETERNO design',
     alternates: {
       canonical: `/${l}`,
-      languages: Object.fromEntries(locales.map((x) => [x, `/${x}`])),
+      languages: {
+        ...Object.fromEntries(locales.map((x) => [x, `/${x}`])),
+        'x-default': `/es`,
+      },
     },
     openGraph: {
       title: meta[l].title,
       description: meta[l].description,
       type: 'website',
+      siteName: 'ETERNO design',
+      url: `/${l}`,
+      locale: ogLocale[l],
+      alternateLocale: locales.filter((x) => x !== l).map((x) => ogLocale[x]),
+      images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'ETERNO design — Premium SPC Flooring' }],
     },
+    twitter: {
+      card: 'summary_large_image',
+      title: meta[l].title,
+      description: meta[l].description,
+      images: ['/og.jpg'],
+    },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -63,9 +90,36 @@ export default async function LangLayout({
   if (!isLocale(lang)) notFound();
   const dict = getDictionary(lang);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'ETERNO design',
+    url: 'https://eternodesigns.com',
+    logo: 'https://eternodesigns.com/og.jpg',
+    image: 'https://eternodesigns.com/og.jpg',
+    description: meta[lang].description,
+    email: CONTACT.email,
+    telephone: CONTACT.phoneRaw,
+    areaServed: ['ES', 'PT'],
+    slogan: dict.hero.title,
+    sameAs: [CONTACT.whatsapp],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: CONTACT.phoneRaw,
+      email: CONTACT.email,
+      contactType: 'sales',
+      availableLanguage: ['es', 'pt', 'ru', 'en'],
+    },
+    makesOffer: {
+      '@type': 'Offer',
+      itemOffered: { '@type': 'Product', category: 'SPC flooring', name: 'Premium SPC flooring' },
+    },
+  };
+
   return (
     <html lang={lang}>
       <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <a href="#main" className="skip-link">Skip to content</a>
         <Header locale={lang} dict={dict} />
         <main id="main">{children}</main>

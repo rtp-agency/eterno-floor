@@ -46,24 +46,6 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         </div>
       </section>
 
-      {/* PERFORMANCE STRIP */}
-      <section className="perf">
-        <div className="container">
-          <div className="section-head">
-            <h2 className="section-head__title">{dict.performance.title}</h2>
-            <p className="section-head__lead">{dict.performance.lead}</p>
-          </div>
-          <ul className="perf__grid">
-            {dict.performance.points.map((p, i) => (
-              <li key={p} className="perf__item">
-                <span className="perf__num">{String(i + 1).padStart(2, '0')}</span>
-                <span className="perf__text">{p}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
       {/* FEATURES */}
       <section className="features" id="features">
         <div className="container">
